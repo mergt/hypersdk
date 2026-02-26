@@ -410,6 +410,7 @@ pub enum Incoming {
     /// Fill events for a user
     #[serde(rename_all = "camelCase")]
     UserFills {
+        #[serde(default)]
         is_snapshot: bool,
         user: Address,
         fills: Vec<Fill>,
@@ -922,7 +923,7 @@ pub struct L2Book {
     pub time: u64,
     /// True if snapshot, false/None if delta
     #[serde(default)]
-    pub snapshot: Option<bool>,
+    pub snapshot: bool,
     /// [bids, asks]
     pub levels: [Vec<BookLevel>; 2],
 }
@@ -931,7 +932,7 @@ impl L2Book {
     /// Returns true if this is a full snapshot (not a delta update).
     #[must_use]
     pub fn is_snapshot(&self) -> bool {
-        self.snapshot.unwrap_or(false)
+        self.snapshot
     }
 
     /// Returns the bid levels (sorted from highest to lowest).
@@ -1221,7 +1222,7 @@ pub struct TwapSliceFill {
 #[serde(rename_all = "camelCase")]
 pub struct UserTwapSliceFills {
     #[serde(default)]
-    pub is_snapshot: Option<bool>,
+    pub is_snapshot: bool,
     pub user: Address,
     #[serde(default)]
     pub twap_slice_fills: Vec<TwapSliceFill>,
@@ -1281,7 +1282,7 @@ pub struct TwapHistory {
 #[serde(rename_all = "camelCase")]
 pub struct UserTwapHistory {
     #[serde(default)]
-    pub is_snapshot: Option<bool>,
+    pub is_snapshot: bool,
     pub user: Address,
     #[serde(default)]
     pub history: Vec<TwapHistory>,
@@ -3467,7 +3468,7 @@ mod tests {
         let incoming: Incoming = serde_json::from_str(json).unwrap();
         match incoming {
             Incoming::UserTwapSliceFills(payload) => {
-                assert_eq!(payload.is_snapshot, Some(true));
+                assert!(payload.is_snapshot);
                 assert_eq!(payload.twap_slice_fills.len(), 1);
                 assert_eq!(payload.twap_slice_fills[0].twap_id, 42);
                 assert_eq!(payload.twap_slice_fills[0].fill.coin, "BTC");
@@ -3511,7 +3512,7 @@ mod tests {
         let incoming: Incoming = serde_json::from_str(json).unwrap();
         match incoming {
             Incoming::UserTwapHistory(payload) => {
-                assert_eq!(payload.is_snapshot, Some(false));
+                assert!(!payload.is_snapshot);
                 assert_eq!(payload.history.len(), 1);
                 let item = &payload.history[0];
                 assert_eq!(item.state.coin, "BTC");
@@ -3557,7 +3558,7 @@ mod tests {
         let incoming: Incoming = serde_json::from_str(json).unwrap();
         match incoming {
             Incoming::UserTwapHistory(payload) => {
-                assert_eq!(payload.is_snapshot, Some(true));
+                assert!(payload.is_snapshot);
                 assert_eq!(payload.history.len(), 1);
                 let item = &payload.history[0];
                 assert!(matches!(item.status.status, TwapStatus::Activated));
@@ -3724,8 +3725,12 @@ mod tests {
             "users": ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]
         }"#;
         let trade: Trade = serde_json::from_str(json).unwrap();
-        let buyer: Address = "0x1111111111111111111111111111111111111111".parse().unwrap();
-        let seller: Address = "0x2222222222222222222222222222222222222222".parse().unwrap();
+        let buyer: Address = "0x1111111111111111111111111111111111111111"
+            .parse()
+            .unwrap();
+        let seller: Address = "0x2222222222222222222222222222222222222222"
+            .parse()
+            .unwrap();
         assert_eq!(trade.users[0], buyer);
         assert_eq!(trade.users[1], seller);
     }
@@ -3758,7 +3763,9 @@ mod tests {
             "users": ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]
         }"#;
         let trade: Trade = serde_json::from_str(json).unwrap();
-        let buyer: Address = "0x1111111111111111111111111111111111111111".parse().unwrap();
+        let buyer: Address = "0x1111111111111111111111111111111111111111"
+            .parse()
+            .unwrap();
         assert_eq!(trade.taker_address(), buyer);
     }
 
@@ -3775,7 +3782,9 @@ mod tests {
             "users": ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]
         }"#;
         let trade: Trade = serde_json::from_str(json).unwrap();
-        let seller: Address = "0x2222222222222222222222222222222222222222".parse().unwrap();
+        let seller: Address = "0x2222222222222222222222222222222222222222"
+            .parse()
+            .unwrap();
         assert_eq!(trade.taker_address(), seller);
     }
 
@@ -3807,7 +3816,9 @@ mod tests {
             "users": ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]
         }"#;
         let trade: Trade = serde_json::from_str(json).unwrap();
-        let seller: Address = "0x2222222222222222222222222222222222222222".parse().unwrap();
+        let seller: Address = "0x2222222222222222222222222222222222222222"
+            .parse()
+            .unwrap();
         assert_eq!(trade.maker_address(), seller);
     }
 
@@ -3824,7 +3835,9 @@ mod tests {
             "users": ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]
         }"#;
         let trade: Trade = serde_json::from_str(json).unwrap();
-        let buyer: Address = "0x1111111111111111111111111111111111111111".parse().unwrap();
+        let buyer: Address = "0x1111111111111111111111111111111111111111"
+            .parse()
+            .unwrap();
         assert_eq!(trade.maker_address(), buyer);
     }
 }
